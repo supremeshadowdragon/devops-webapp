@@ -1,3 +1,4 @@
+
 name: CI Pipeline
 
 on:
@@ -19,3 +20,29 @@ jobs:
           test -f index.html
           echo "HTML file verified successfully!"
           echo "CI pipeline completed."
+
+      - name: Send Slack Notification
+        if: always()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          status = os.environ["JOB_STATUS"]
+          message = {
+              "text": f"GitHub Actions CI Pipeline: {status.upper()}"
+          }
+
+          request = urllib.request.Request(
+              os.environ["SLACK_WEBHOOK_URL"],
+              data=json.dumps(message).encode("utf-8"),
+              headers={"Content-Type": "application/json"},
+              method="POST"
+          )
+          with urllib.request.urlopen(request) as response:
+              print("Slack notification sent:", response.status)
+          PY
